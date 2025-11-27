@@ -5,6 +5,7 @@ Original source code - https://github.com/bcbi/CTakesParser.jl
 """
 import os
 import glob
+from pathlib import Path
 import pandas as pd
 from lxml import etree
 
@@ -30,7 +31,7 @@ def parse_dir(in_directory_path, out_directory_path):
     if not os.path.exists(out_directory_path):
         os.makedirs(out_directory_path)
 
-    files = sorted(glob.glob(os.path.join(in_directory_path, "*")))
+    files = sorted(glob.glob(os.path.join(in_directory_path, "**/*")))
     num_files = len(files)
 
     print("Parsing {} files from directory {}".format(num_files, in_directory_path))
@@ -39,13 +40,16 @@ def parse_dir(in_directory_path, out_directory_path):
 
     for file_id, file_path in enumerate(files):
         print("Processing file {}/{} (Path = {})".format(file_id + 1, num_files, file_path))
+        if not os.path.isfile(file_path):
+            continue
+        file_path = Path(file_path)
+        relative_path = file_path.parent.relative_to(in_directory_path)
+        output_dir = Path(out_directory_path) / relative_path
+        output_dir.mkdir(parents=True, exist_ok=True)
+        df = parse_file(str(file_path))
 
-        df = parse_file(file_path)
-
-        head, filename = os.path.split(file_path)
-        filename = os.path.splitext(filename)[0]  # get just the filename
-        filename = filename + '.csv'
-        filename = os.path.join(out_directory_path, filename)
+        filename = file_path.name + ".csv"
+        filename = output_dir / filename
 
         df.to_csv(filename, index=None, encoding='utf8')
 
